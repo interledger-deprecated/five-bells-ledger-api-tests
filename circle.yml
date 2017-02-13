@@ -1,0 +1,12 @@
+machine:
+  node:
+    version: 6.9.1
+test:
+  override:
+    - echo 'no tests currently'
+deployment:
+  production:
+    branch: master
+    commands:
+      - mv npmrc-env .npmrc
+      - if [ $(npm show five-bells-ledger-api-tests version) != $(npm ls --depth=-1 2>/dev/null | head -1 | cut -f 1 -d " " | cut -f 2 -d @) ] ; then npm publish ; fi
