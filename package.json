@@ -14,8 +14,8 @@
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
     "co-mocha": "^1.1.3",
-    "ilp-plugin-bells": "^10.2.0",
-    "ilp-plugin-tests": "^3.0.0",
+    "ilp-plugin-bells": "^11.0.0",
+    "ilp-plugin-tests": "^4.0.0",
     "istanbul": "^0.4.5",
     "mocha": "^3.2.0",
     "uuid4": "^1.0.0"
