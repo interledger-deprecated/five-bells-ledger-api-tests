@@ -10,20 +10,66 @@ const joinUsername = (uri, name) => {
 }
 
 const assert = chai.assert
+const PluginBells = require('ilp-plugin-bells')
 const PluginBellsFactory = require('ilp-plugin-bells').Factory
 const uuid = require('uuid4')
+const request = require('superagent')
 
 const prefix = process.env.TEST_ILP_PREFIX
 const accountUri = process.env.TEST_ACCOUNT_URI
 const adminUser = process.env.TEST_ADMIN_ACCOUNT
 const adminPass = process.env.TEST_ADMIN_PASSWORD
+const user1Pass = process.env.TEST_PASSWORD_1
 const user1 = process.env.TEST_ACCOUNT_1
 const user2 = process.env.TEST_ACCOUNT_2
 
-if (!prefix || !accountUri || !adminUser || !adminPass || !user1 || !user2) {
-  console.error('TEST_ILP_PREFIX, TEST_ACCOUNT_URI, TEST_ADMIN_ACCOUNT, TEST_ADMIN_PASS, TEST_ACCOUNT_1, and TEST_ACCOUNT_2 must be set.')
+if (!prefix || !accountUri || !adminUser || !adminPass || !user1 || !user2 || !user1Pass) {
+  console.error('TEST_ILP_PREFIX, TEST_ACCOUNT_URI, TEST_ADMIN_ACCOUNT, TEST_ADMIN_PASS, TEST_PASSWORD_1, TEST_ACCOUNT_1, and TEST_ACCOUNT_2 must be set.')
   process.exit(1)
 }
+
+describe('Ledger API', function () {
+  beforeEach(function * () {
+    this.transfer = {
+      id: uuid(),
+      account: prefix + user2,
+      amount: '1',
+      expiresAt: (new Date((new Date()).getTime() + 10000)).toISOString()
+    }
+
+    this.plugin = new PluginBells({
+      account: joinUsername(accountUri, user1),
+      password: user1Pass,
+      prefix: prefix
+    })
+
+    yield this.plugin.connect()
+    assert.isTrue(this.plugin.isConnected())
+  })
+
+  it('should return a 400 if an invalid fulfillment is submitted to the ledger', function (done) {
+    this.plugin.sendTransfer(Object.assign({},
+      this.transfer,
+      { executionCondition: 'uzoYx3K6u-Nt6kZjbN6KmH0yARfhkj9e17eQfpSeB7U' }))
+      .then(() => {
+        return request.put(
+          this.plugin.ledgerContext.urls.transfer_fulfillment
+            .replace(':id', this.transfer.id))
+          .auth(user1, user1Pass)
+          .send('this is an invalid fulillment')
+      })
+      .then((res) => {
+        done(new Error('ledger should return a 400 error, got:', res))
+      })
+      .catch((e) => {
+        assert.equal(e.status, 400, 'response status should be 400')
+        assert.isObject(e.response.body, 'error response should have a body')
+        assert.equal(e.response.body.id, 'InvalidBodyError', 'error id should be "InvalidBodyError"')
+        done()
+      })
+      .catch((e) => done(e))
+    })
+})
 
 describe('PluginBellsFactory', function () {
   beforeEach(function * () {
